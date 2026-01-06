@@ -1,0 +1,9 @@
+from consumer import ConsumerService
+
+def main():
+    consumer_service = ConsumerService()
+    consumer_service.start()
+
+
+if __name__ == "__main__":
+    main()

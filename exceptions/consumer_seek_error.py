@@ -1,0 +1,2 @@
+class ConsumerSeekError(Exception):
+    pass

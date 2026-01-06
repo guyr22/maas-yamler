@@ -1,0 +1,36 @@
+general:
+  app_name: maas-yamler
+  env: test
+  collectors_namespace: maas-collectors
+
+git:
+  repo_url: $GIT_REPO_URL
+  branch: main
+  local_path: $GIT_LOCAL_PATH
+
+kafka:
+  servers: [$KAFKA_SERVERS]
+  topic: $KAFKA_TOPIC
+  security_protocol: SASL_PLAINTEXT
+  sasl_mechanism: SCRAM-SHA-256
+  sasl_username: $KAFKA_USERNAME
+  sasl_password: $KAFKA_PASSWORD
+
+certificates:
+  ca_file: $CA_FILE
+  cert_file: $CERT_FILE
+  key_file: $KEY_FILE
+
+logs:
+  base_level: DEBUG
+  logstash:
+    enabled: false
+    lebel: DEBUG
+    host: $LOGSTASH_HOST
+    port: $LOGSTASH_PORT
+    transport_type: logstash_async.transport.HttpTransport
+  console:
+    level: DEBUG
+    format: "%(asctime)-24s\t%(levelname)-5s\t%(name)-12s\t%(message)s"
+    
+  

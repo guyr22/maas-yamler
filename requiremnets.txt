@@ -1,0 +1,8 @@
+confluent-kafka==2.12.2
+pydantic==2.11.7
+envyaml==0.1910
+ruamel.yaml==0.18.16
+GitPython==3.1.45
+python-logstash-async==3.0.0
+pytest==8.0.0
+pytest-mock==3.12.0
