@@ -14,10 +14,10 @@ class BlackboxJobFormatter(JobFormatter):
     @classmethod
     def format_job(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         data = cls.format_common_fields(data)
-        data['params'] = {"module": [data.pop("module")]}
-        data['metrics_path'] = data.pop("metrics_path")
-        data['static_configs'] = data.get("static_configs", [{}])
-        data['static_configs'][0]['targets'] = data.pop("targets", [])
-        data['relabel_configs'] = cls.get_blackbox_config(data.pop("host"))
+        data["params"] = {"module": [data.pop("module")]}
+        data["metrics_path"] = data.pop("metrics_path")
+        data["static_configs"] = data.get("static_configs", [{}])
+        data["static_configs"][0]["targets"] = data.pop("targets", [])
+        data["relabel_configs"] = cls.get_blackbox_config(data.pop("host"))
 
         return data

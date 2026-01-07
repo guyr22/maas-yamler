@@ -17,3 +17,5 @@ class GeneralJobFormatter(JobFormatter):
             data['tls_config']['ca_file'] = CERTS_CONFIG['ca_file']
             data['tls_config']['cert_file'] = CERTS_CONFIG['cert_file']
             data['tls_config']['key_file'] = CERTS_CONFIG['key_file']
+
+        return data

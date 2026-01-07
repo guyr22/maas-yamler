@@ -32,7 +32,7 @@ class ConsumerService:
         self.running = True
         conf = {
             'bootstrap.servers': KAFKA_CONFIG['servers'],
-            'group.id': KAFKA_CONFIG['username'],
+            'group.id': KAFKA_CONFIG['sasl_password'],
             'auto.offset.reset': 'earliest',
             'enable.auto.commit': False,
             'security.protocol': KAFKA_CONFIG['security_protocol'],
@@ -83,8 +83,8 @@ class ConsumerService:
             
             if event.action in [EventAction.CREATE, EventAction.UPDATE]:
                 formatter_cls = get_formatter(job_type=event.job_type)
-                event.data = formatter_cls.format_job(data=event.data)
-                logger.info(f"formatted job data: {event.data}")
+                event.job_data = formatter_cls.format_job(data=event.job_data)
+                logger.info(f"formatted job data: {event.job_data}")
             
             yaml_filename = self._get_filename(event.maas_pool, event.collector_cluster)
             self.prometheus_manager.update_content(action=event.action, job_data=event.job_data, job_name=event.job_name, yaml_filename=yaml_filename)

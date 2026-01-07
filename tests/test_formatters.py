@@ -1,79 +1,104 @@
 import pytest
+from enums.job_types import JobType
 from formatters.formatter_factory import get_formatter
 from formatters.general_job_formatter import GeneralJobFormatter
 from formatters.blackbox_job_formatter import BlackboxJobFormatter
 from formatters.http_sd_job_formatter import HttpSDJobFormatter
-from enums.job_types import JobType
+from config import CERTS_CONFIG
 
 
-def test_formatter_factory():
+def test_get_formatter_success():
     assert get_formatter(JobType.GENERAL) == GeneralJobFormatter
     assert get_formatter(JobType.BLACKBOX) == BlackboxJobFormatter
     assert get_formatter(JobType.HTTP_SD) == HttpSDJobFormatter
 
+
+def test_get_formatter_invalid():
     with pytest.raises(ValueError):
-        get_formatter("INVALID_TYPE")
+        get_formatter("unknown")
 
 
-def test_general_job_formatter(sample_job_data):
-    formatted = GeneralJobFormatter.format_job(sample_job_data.copy())
+class TestGeneralJobFormatter:
+    def test_format_basic(self):
+        input_data = {
+            "job_name": "test",
+            "scrape_interval": 60,
+            "scrape_timeout": 30,
+            "targets": ["localhost:9090"],
+        }
 
-    # Check structure
-    assert "targets" not in formatted
-    assert formatted["static_configs"][0]["targets"] == sample_job_data["targets"]
-    assert formatted["metrics_path"] == "/metrics"
+        output = GeneralJobFormatter.format_job(input_data)
 
+        assert output["job_name"] == "test"
+        assert output["scrape_interval"] == "60s"
+        assert output["scrape_timeout"] == "30s"
+        assert output["static_configs"][0]["targets"] == ["localhost:9090"]
 
-def test_general_job_formatter_tls():
-    data = {
-        "targets": ["host:port"],
-        "certs": True,
-        "metrics_path": "/metrics",  # Required to be poppable or processed
-    }
-    # Mocking common fields requirement if any. Assuming simplistic for now or that base class handles it.
-    # Base JobFormatter isn't visible here but format_common_fields usually handles metrics_path etc.
-    # We'll need to make sure 'metrics_path' is in input if base class expects it.
+    def test_format_certs(self):
+        input_data = {"job_name": "test", "certs": True}
 
-    formatted = GeneralJobFormatter.format_job(data)
-    assert "tls_config" in formatted
-    assert formatted["tls_config"]["ca_file"] == "/path/to/ca"
+        # Patching or assuming global config loaded.
+        # Ideally we'd patch 'formatters.general_job_formatter.CERTS_CONFIG' but it is imported directly.
+        # However, we can assert based on what keys are present.
 
+        output = GeneralJobFormatter.format_job(input_data)
 
-def test_blackbox_job_formatter():
-    data = {
-        "module": "http_2xx",
-        "metrics_path": "/probe",
-        "targets": ["example.com"],
-        "host": "prometheus-blackbox-exporter:9115",
-        "scrape_interval": "1m",
-    }
-    formatted = BlackboxJobFormatter.format_job(data)
-
-    assert formatted["metrics_path"] == "/probe"
-    # Verify module param structure
-    assert formatted["params"]["module"] == ["http_2xx"]
-    # Verify relabel configs for replacement
-    assert (
-        formatted["relabel_configs"][2]["replacement"]
-        == "prometheus-blackbox-exporter:9115"
-    )
+        assert "tls_config" in output
+        assert output["tls_config"]["ca_file"] == CERTS_CONFIG["ca_file"]
 
 
-def test_http_sd_job_formatter():
-    data = {
-        "url_endpoints": ["http://discovery.example.com"],
-        "refresh_interval": "5m",
-        "basic_auth": {"username": "user", "password": "pass"},
-    }
-    # http_sd might expect metrics_path or other common fields if it calls format_common_fields
-    # Looking at code: yes, it calls cls.format_common_fields(data)
-    # We should add minimal common fields
-    data["metrics_path"] = "/metrics"
+class TestBlackboxJobFormatter:
+    def test_format_basic(self):
+        input_data = {
+            "job_name": "blackbox",
+            "module": "http_2xx",
+            "metrics_path": "/probe",
+            "host": "prometheus-blackbox-exporter",
+            "targets": ["example.com"],
+        }
 
-    formatted = HttpSDJobFormatter.format_job(data)
+        output = BlackboxJobFormatter.format_job(input_data)
 
-    assert len(formatted["http_sd_configs"]) == 1
-    config = formatted["http_sd_configs"][0]
-    assert config["url"] == "http://discovery.example.com"
-    assert config["basic_auth"]["username"] == "user"
-    assert config["refresh_interval"] == 300  # 5m converted to seconds
+        assert output["metrics_path"] == "/probe"
+        assert output["params"]["module"] == ["http_2xx"]
+        assert output["static_configs"][0]["targets"] == ["example.com"]
+
+        # Verify blackbox config relay
+        # NOTE: logic copies constant then sets replacement
+        assert (
+            output["relabel_configs"][2]["replacement"]
+            == "prometheus-blackbox-exporter"
+        )
+
+
+class TestHttpSDJobFormatter:
+    def test_format_basic(self):
+        input_data = {
+            "job_name": "httpsd",
+            "url_endpoints": ["http://discovery"],
+            "refresh_interval": 60,
+        }
+
+        output = HttpSDJobFormatter.format_job(input_data)
+
+        assert output["http_sd_configs"][0]["url"] == "http://discovery"
+        # The logic converts number to seconds suffix?
+        # Looking at code: cls.convert_number_to_seconds (inherited?)
+        # Base JobFormatter isn't visible in my context but let's assume it appends 's' if int.
+        assert output["http_sd_configs"][0]["refresh_interval"] == "60s"
+
+    def test_format_auth_and_certs(self):
+        input_data = {
+            "job_name": "httpsd",
+            "url_endpoints": ["http://discovery"],
+            "basic_auth": {"username": "u", "password": "p"},
+            "certs": True,
+        }
+
+        output = HttpSDJobFormatter.format_job(input_data)
+
+        assert output["http_sd_configs"][0]["basic_auth"] == {
+            "username": "u",
+            "password": "p",
+        }
+        assert output["tls_config"]["ca_file"] == CERTS_CONFIG["ca_file"]

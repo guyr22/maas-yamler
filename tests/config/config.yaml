@@ -32,5 +32,4 @@ logs:
   console:
     level: DEBUG
     format: "%(asctime)-24s\t%(levelname)-5s\t%(name)-12s\t%(message)s"
-    
-  
+
